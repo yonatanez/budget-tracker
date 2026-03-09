@@ -1,0 +1,3 @@
+@echo off
+echo Opening Israeli Budget Tracker...
+start "" "public\index.html"
