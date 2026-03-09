@@ -207,6 +207,8 @@ const recurringExpenseGenerator = new window.RecurringExpenseGenerator(validatio
 // Populate recurring start/end month selectors with Hebrew month names
 const recurringStartMonth = document.getElementById('recurringStartMonth');
 const recurringEndMonth = document.getElementById('recurringEndMonth');
+const recurringStartYear = document.getElementById('recurringStartYear');
+const recurringEndYear = document.getElementById('recurringEndYear');
 for (let m = 1; m <= 12; m++) {
     const name = localizationService.getMonthName(m);
     const opt1 = document.createElement('option');
@@ -218,10 +220,24 @@ for (let m = 1; m <= 12; m++) {
     opt2.textContent = name;
     recurringEndMonth.appendChild(opt2);
 }
+// Populate year selectors (current year + next 2 years)
+const currentYear = now.getFullYear();
+for (let y = currentYear; y <= currentYear + 2; y++) {
+    const opt1 = document.createElement('option');
+    opt1.value = String(y);
+    opt1.textContent = String(y);
+    recurringStartYear.appendChild(opt1);
+    const opt2 = document.createElement('option');
+    opt2.value = String(y);
+    opt2.textContent = String(y);
+    recurringEndYear.appendChild(opt2);
+}
 // Default recurring months to current month
 const currentMonthNum = now.getMonth() + 1;
 recurringStartMonth.value = String(currentMonthNum);
 recurringEndMonth.value = String(currentMonthNum);
+recurringStartYear.value = String(currentYear);
+recurringEndYear.value = String(currentYear);
 
 // Recurring toggle show/hide logic
 document.getElementById('recurringToggle').addEventListener('change', (e) => {
@@ -474,14 +490,16 @@ document.getElementById('expense-form').addEventListener('submit', async (e) => 
             // Recurring expense flow
             const startMonthVal = parseInt(document.getElementById('recurringStartMonth').value, 10);
             const endMonthVal = parseInt(document.getElementById('recurringEndMonth').value, 10);
+            const startYearVal = parseInt(document.getElementById('recurringStartYear').value, 10);
+            const endYearVal = parseInt(document.getElementById('recurringEndYear').value, 10);
 
             const config = {
                 amount: amount,
                 category: category,
                 description: description,
                 dayOfMonth: selectedDay,
-                startMonth: new Date(year, startMonthVal - 1, 1),
-                endMonth: new Date(year, endMonthVal - 1, 1)
+                startMonth: new Date(startYearVal, startMonthVal - 1, 1),
+                endMonth: new Date(endYearVal, endMonthVal - 1, 1)
             };
 
             // Validate recurring config

@@ -1338,3 +1338,10 @@ tr:hover {
         font-size: 0.85em;
     }
 }
+
+
+/* Fix chart rendering on mobile Safari */
+canvas {
+    width: 100% !important;
+    max-width: 100%;
+}

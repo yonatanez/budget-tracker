@@ -178,11 +178,17 @@
                 <div id="recurring-fields" style="display: none;">
                     <div class="form-group">
                         <label for="recurringStartMonth">מחודש:</label>
-                        <select id="recurringStartMonth" aria-label="חודש התחלה"></select>
+                        <div class="date-selector-group">
+                            <select id="recurringStartMonth" aria-label="חודש התחלה"></select>
+                            <select id="recurringStartYear" aria-label="שנת התחלה"></select>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="recurringEndMonth">עד חודש:</label>
-                        <select id="recurringEndMonth" aria-label="חודש סיום"></select>
+                        <div class="date-selector-group">
+                            <select id="recurringEndMonth" aria-label="חודש סיום"></select>
+                            <select id="recurringEndYear" aria-label="שנת סיום"></select>
+                        </div>
                     </div>
                 </div>
                 

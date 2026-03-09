@@ -161,11 +161,11 @@ This implementation plan breaks down the Israeli Budget Tracker feature into dis
     - Test load failure with empty data initialization
     - _Requirements: 8.4_
 
-- [~] 9. Checkpoint - Ensure all tests pass
+- [ ] 9. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 10. Implement expense manager
-  - [~] 10.1 Create ExpenseManager for expense operations
+  - [ ] 10.1 Create ExpenseManager for expense operations
     - Implement addExpense() with validation and storage
     - Implement uploadExpenses() using CSVParser and validation
     - Implement getExpensesByMonth() to filter expenses by month
@@ -173,24 +173,24 @@ This implementation plan breaks down the Israeli Budget Tracker feature into dis
     - Return UploadResult with success count and failed records
     - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 6.1_
   
-  - [~] 10.2 Write property test for expense entry with optional fields
+  - [ ] 10.2 Write property test for expense entry with optional fields
     - **Property 9: Expense Entry with Optional Fields**
     - **Validates: Requirements 3.1, 3.4**
   
-  - [~] 10.3 Write property test for upload validation consistency
+  - [ ] 10.3 Write property test for upload validation consistency
     - **Property 14: Upload Validation Consistency**
     - **Validates: Requirements 4.3**
   
-  - [~] 10.4 Write property test for partial upload success
+  - [ ] 10.4 Write property test for partial upload success
     - **Property 15: Partial Upload Success**
     - **Validates: Requirements 4.5, 4.6**
   
-  - [~] 10.5 Write property test for duplicate detection
+  - [ ] 10.5 Write property test for duplicate detection
     - **Property 25: Duplicate Detection**
     - **Validates: Requirements 9.3**
 
 - [ ] 11. Implement budget controller
-  - [~] 11.1 Create BudgetController to orchestrate workflows
+  - [ ] 11.1 Create BudgetController to orchestrate workflows
     - Implement enterSalary() to validate, calculate taxes, and store salary
     - Implement addExpense() delegating to ExpenseManager
     - Implement uploadExpenses() delegating to ExpenseManager
@@ -198,49 +198,49 @@ This implementation plan breaks down the Israeli Budget Tracker feature into dis
     - Implement getAnnualReport() to generate annual financial overview
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 1.10, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 2.8, 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 6.1, 6.2, 6.3, 6.4, 6.5, 7.1, 7.2, 7.3, 7.4, 7.5, 7.6, 7.7, 7.8, 7.9_
   
-  - [~] 11.2 Write property test for monthly expense filtering
+  - [ ] 11.2 Write property test for monthly expense filtering
     - **Property 16: Monthly Expense Filtering**
     - **Validates: Requirements 6.1**
   
-  - [~] 11.3 Write property test for monthly total calculation
+  - [ ] 11.3 Write property test for monthly total calculation
     - **Property 17: Monthly Total Calculation**
     - **Validates: Requirements 6.2**
   
-  - [~] 11.4 Write property test for monthly savings calculation
+  - [ ] 11.4 Write property test for monthly savings calculation
     - **Property 18: Monthly Savings Calculation**
     - **Validates: Requirements 6.5**
   
-  - [~] 11.5 Write property test for category grouping correctness
+  - [ ] 11.5 Write property test for category grouping correctness
     - **Property 19: Category Grouping Correctness**
     - **Validates: Requirements 6.3, 7.7**
   
-  - [~] 11.6 Write property test for annual period coverage
+  - [ ] 11.6 Write property test for annual period coverage
     - **Property 20: Annual Period Coverage**
     - **Validates: Requirements 7.1**
   
-  - [~] 11.7 Write property test for annual totals calculation
+  - [ ] 11.7 Write property test for annual totals calculation
     - **Property 21: Annual Totals Calculation**
     - **Validates: Requirements 7.3, 7.4, 7.5**
   
-  - [~] 11.8 Write property test for monthly report completeness
+  - [ ] 11.8 Write property test for monthly report completeness
     - **Property 22: Monthly Report Completeness**
     - **Validates: Requirements 7.2, 7.6**
   
-  - [~] 11.9 Write property test for annual pension accumulation
+  - [ ] 11.9 Write property test for annual pension accumulation
     - **Property 23: Annual Pension Accumulation Calculation**
     - **Validates: Requirements 7.8**
   
-  - [~] 11.10 Write property test for annual study fund accumulation
+  - [ ] 11.10 Write property test for annual study fund accumulation
     - **Property 24: Annual Study Fund Accumulation Calculation**
     - **Validates: Requirements 7.9**
   
-  - [~] 11.11 Write integration tests for complete workflows
+  - [ ] 11.11 Write integration tests for complete workflows
     - Test complete workflow: enter salary → add expenses → view monthly report
     - Test upload CSV → view expenses → verify persistence
     - Test multiple months → generate annual report
     - _Requirements: 1.7, 3.6, 6.1, 6.2, 6.5, 7.1, 7.2, 7.3, 7.4, 7.5, 8.1, 8.2, 8.3_
 
-- [~] 12. Checkpoint - Ensure all tests pass
+- [ ] 12. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 - [ ] 13. Implement presentation layer
@@ -295,13 +295,13 @@ This implementation plan breaks down the Israeli Budget Tracker feature into dis
     - Apply global RTL styling for Hebrew interface
     - _Requirements: 8.3, 8.4, 10.7_
   
-  - [~] 14.2 Add error boundary and global error handling
+  - [ ] 14.2 Add error boundary and global error handling
     - Implement error boundary component for React (if using React)
     - Display all error messages in Hebrew
     - Ensure graceful degradation on errors
     - _Requirements: 8.4, 10.4_
 
-- [~] 15. Final checkpoint - Ensure all tests pass
+- [ ] 15. Final checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Notes
