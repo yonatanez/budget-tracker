@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מעקב תקציב ישראלי - Israeli Budget Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 מעקב תקציב אישי</h1>
+            <p class="subtitle">מערכת לניהול הכנסות והוצאות לפי תקנות מס 2026</p>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab-btn active" data-tab="salary">💰 משכורת</button>
+            <button class="tab-btn" data-tab="expense">🛒 הוצאה</button>
+            <button class="tab-btn" data-tab="savings">💎 חיסכון</button>
+            <button class="tab-btn" data-tab="monthly">📅 דוח חודשי</button>
+            <button class="tab-btn" data-tab="annual">📈 דוח שנתי</button>
+        </nav>
+
+        <!-- Salary Tab -->
+        <div class="tab-content active" id="salary-tab">
+            <h2>הזנת משכורת</h2>
+            
+            <div class="form-group">
+                <button type="button" id="duplicateLastMonth" class="btn-secondary" style="margin-bottom: 15px;">
+                    📋 שכפל משכורת מהחודש הקודם
+                </button>
+            </div>
+            
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="simplifiedMode" style="margin-left: 10px;">
+                    מצב פשוט - הזן נתונים ישירות מתלוש השכר
+                </label>
+            </div>
+            
+            <form id="salary-form">
+                <div id="detailed-inputs">
+                    <div class="form-group">
+                        <label for="month">חודש:</label>
+                        <input type="month" id="month" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="baseSalary">משכורת בסיס (₪):</label>
+                        <input type="number" id="baseSalary" step="0.01" min="0" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="bonus">בונוס (₪):</label>
+                        <input type="number" id="bonus" step="0.01" min="0">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="mealVouchers">הכנסה לצורך מס (מזון קה"ש וכו') (₪):</label>
+                        <input type="number" id="mealVouchers" step="0.01" min="0">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="otherCompensation">רכיבי שכר נוספים (₪):</label>
+                        <input type="number" id="otherCompensation" step="0.01" min="0">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="taxCreditPoints">נקודות זיכוי:</label>
+                        <input type="number" id="taxCreditPoints" step="0.01" min="0" max="10" value="2.25">
+                        <small style="display: block; color: #666; margin-top: 5px;">ערך בין 0 ל-10 (ברירת מחדל: 2.25)</small>
+                        <div id="taxCreditError" style="display: none; color: #d32f2f; margin-top: 5px;"></div>
+                    </div>
+                </div>
+                
+                <div id="simplified-inputs" style="display: none;">
+                    <div class="form-group">
+                        <label for="simpleMonth">חודש:</label>
+                        <input type="month" id="simpleMonth" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="simpleGrossSalary">משכורת ברוטו (₪):</label>
+                        <input type="number" id="simpleGrossSalary" step="0.01" min="0" required>
+                        <small style="display: block; color: #666; margin-top: 5px;">סך כל ההכנסה לפני ניכויים</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="simpleTotalTax">סך ניכויי מס (₪):</label>
+                        <input type="number" id="simpleTotalTax" step="0.01" min="0" required>
+                        <small style="display: block; color: #666; margin-top: 5px;">מס הכנסה + ביטוח לאומי + ביטוח בריאות</small>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="simplePension">פנסיה (עובד + מעביד) (₪):</label>
+                        <input type="number" id="simplePension" step="0.01" min="0" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="simpleStudyFund">קרן השתלמות (עובד + מעביד) (₪):</label>
+                        <input type="number" id="simpleStudyFund" step="0.01" min="0" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="simpleNetIncome">הכנסה נטו (₪):</label>
+                        <input type="number" id="simpleNetIncome" step="0.01" min="0" required>
+                        <small style="display: block; color: #666; margin-top: 5px;">הסכום שמגיע לחשבון הבנק</small>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-primary">חשב ושמור</button>
+            </form>
+            
+            <div id="stock-calculator-container"></div>
+            
+            <div id="salary-result" class="result-box" style="display: none;">
+                <h3>תוצאות חישוב מס</h3>
+                <div id="salary-details"></div>
+            </div>
+            
+            <!-- Salary Entry List Section -->
+            <div id="salary-entry-section" class="entry-section">
+                <h3>רשומות משכורת קודמות</h3>
+                <div id="salary-entry-list" class="entry-list">
+                    <!-- Salary entries will be rendered here by EntryManager -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Expense Tab -->
+        <div class="tab-content" id="expense-tab">
+            <h2>הוספת הוצאה</h2>
+            <form id="expense-form">
+                <div class="form-group">
+                    <label for="expenseAmount">סכום (₪):</label>
+                    <input type="number" id="expenseAmount" step="0.01" min="0.01" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>תאריך:</label>
+                    <div class="date-selector-group">
+                        <select id="expenseMonth" aria-label="חודש"></select>
+                        <select id="expenseDay" aria-label="יום"></select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="expenseCategory">קטגוריה:</label>
+                    <select id="expenseCategory">
+                        <option value="">ללא קטגוריה</option>
+                        <option value="אחר">אחר</option>
+                        <option value="ביגוד">ביגוד</option>
+                        <option value="בילויים">בילויים</option>
+                        <option value="בריאות">בריאות</option>
+                        <option value="דירה">דירה</option>
+                        <option value="חינוך">חינוך</option>
+                        <option value="חשמל ומים">חשמל ומים</option>
+                        <option value="מזון">מזון</option>
+                        <option value="תחבורה">תחבורה</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="expenseDescription">תיאור:</label>
+                    <input type="text" id="expenseDescription" maxlength="200">
+                </div>
+                
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="recurringToggle" style="margin-left: 10px;">
+                        הוצאה חוזרת
+                    </label>
+                </div>
+                
+                <div id="recurring-fields" style="display: none;">
+                    <div class="form-group">
+                        <label for="recurringStartMonth">מחודש:</label>
+                        <select id="recurringStartMonth" aria-label="חודש התחלה"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="recurringEndMonth">עד חודש:</label>
+                        <select id="recurringEndMonth" aria-label="חודש סיום"></select>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-primary">הוסף הוצאה</button>
+            </form>
+            
+            <div id="expense-result" class="result-box" style="display: none;"></div>
+            
+            <!-- Expense Entry List Section -->
+            <div id="expense-entry-section" class="entry-section">
+                <h3>רשומות הוצאות קודמות</h3>
+                <div id="expense-entry-list" class="entry-list">
+                    <!-- Expense entries will be rendered here by EntryManager -->
+                </div>
+            </div>
+        </div>
+
+
+
+        <!-- Savings Tab -->
+        <div class="tab-content" id="savings-tab">
+            <h2>חיסכון והשקעות</h2>
+            <form id="savings-form">
+                <div class="form-group">
+                    <label for="savingsType">סוג:</label>
+                    <select id="savingsType" required>
+                        <option value="savings">חיסכון</option>
+                        <option value="investment">השקעה</option>
+                        <option value="pension">פנסיה</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="savingsDescription">תיאור:</label>
+                    <input type="text" id="savingsDescription" maxlength="200" required>
+                </div>
+                <div class="form-group">
+                    <label for="savingsAmount">סכום (₪):</label>
+                    <input type="number" id="savingsAmount" step="0.01" min="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label for="savingsMonth">חודש:</label>
+                    <select id="savingsMonth" aria-label="חודש"></select>
+                </div>
+                <button type="submit" class="btn-primary">הוסף רשומה</button>
+            </form>
+            <div id="savings-result" class="result-box" style="display: none;"></div>
+            <div id="savings-entry-section" class="entry-section">
+                <h3>רשומות חיסכון</h3>
+                <div id="savings-entry-list" class="entry-list"></div>
+            </div>
+        </div>
+
+        <!-- Monthly Report Tab -->
+        <div class="tab-content" id="monthly-tab">
+            <h2>דוח חודשי</h2>
+            <div class="savings-goal-settings">
+                <div class="form-group form-group-inline">
+                    <label for="monthlySavingsGoal">יעד חיסכון חודשי (₪):</label>
+                    <input type="number" id="monthlySavingsGoal" step="0.01" min="0.01" placeholder="הזן יעד חיסכון">
+                    <button type="button" id="saveSavingsGoal" class="btn-secondary">שמור יעד</button>
+                </div>
+            </div>
+            <div id="monthly-progress-bar" style="display: none;"></div>
+            <form id="monthly-form">
+                <div class="form-group">
+                    <label for="reportMonth">בחר חודש:</label>
+                    <input type="month" id="reportMonth" required>
+                </div>
+                <button type="submit" class="btn-primary">הצג דוח</button>
+            </form>
+            
+            <div id="monthly-result" class="result-box" style="display: none;">
+                <div id="monthly-chart-container" style="display: none;">
+                    <h3>התפלגות הוצאות לפי קטגוריה</h3>
+                    <div style="position: relative; height: 300px; margin: 20px 0;">
+                        <canvas id="monthlyPieChart"></canvas>
+                    </div>
+                    <div id="no-expenses-message" style="display: none; text-align: center; padding: 20px; color: #666;">
+                        אין הוצאות לחודש זה
+                    </div>
+                </div>
+                <div id="monthly-details"></div>
+            </div>
+        </div>
+
+        <!-- Annual Report Tab -->
+        <div class="tab-content" id="annual-tab">
+            <h2>דוח שנתי (12 חודשים אחרונים)</h2>
+            <button id="annual-btn" class="btn-primary">הצג דוח שנתי</button>
+            
+            <div id="annual-result" class="result-box" style="display: none;">
+                <div id="annual-chart-container" style="display: none;">
+                    <h3>סקירה שנתית - הכנסות, הוצאות וחיסכון</h3>
+                    <div style="position: relative; height: 400px; margin: 20px 0;">
+                        <canvas id="annualBarChart"></canvas>
+                    </div>
+                </div>
+                <div id="annual-savings-display" style="display: none; text-align: center; margin: 20px 0; padding: 20px; border-radius: 8px; background: #f5f5f5;">
+                    <h3 style="margin: 0 0 10px 0;">חיסכון כולל לשנה</h3>
+                    <div id="annual-savings-amount" style="font-size: 2em; font-weight: bold;"></div>
+                </div>
+                <div id="annual-goal-section" style="display: none;">
+                    <h3 style="text-align: center;">יעד חיסכון שנתי</h3>
+                    <div id="annual-progress-bar"></div>
+                </div>
+                <div id="annual-details"></div>
+            </div>
+        </div>
+
+        <div id="error-message" class="error-box" style="display: none;"></div>
+    </div>
+
+    <script src="app.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>

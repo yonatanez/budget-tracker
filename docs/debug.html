@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Debug - Class Check</title>
+</head>
+<body>
+    <h1>Debug: Checking if classes are loaded</h1>
+    <div id="output"></div>
+    
+    <script src="app.js"></script>
+    <script>
+        const output = document.getElementById('output');
+        let html = '<h2>Class Availability:</h2><ul>';
+        
+        const classes = [
+            'LocalizationService',
+            'ValidationService', 
+            'CSVParserImpl',
+            'LocalStorageService',
+            'TaxCalculator',
+            'ExpenseManager',
+            'BudgetController'
+        ];
+        
+        classes.forEach(className => {
+            const exists = typeof window[className] !== 'undefined';
+            const isConstructor = exists && typeof window[className] === 'function';
+            html += `<li><strong>${className}</strong>: `;
+            if (!exists) {
+                html += '<span style="color: red;">❌ NOT FOUND</span>';
+            } else if (!isConstructor) {
+                html += '<span style="color: orange;">⚠️ EXISTS but not a constructor</span>';
+            } else {
+                html += '<span style="color: green;">✓ OK</span>';
+            }
+            html += '</li>';
+        });
+        
+        html += '</ul>';
+        
+        // Try to instantiate
+        html += '<h2>Instantiation Test:</h2>';
+        try {
+            const loc = new window.LocalizationService();
+            html += '<p style="color: green;">✓ LocalizationService instantiated successfully!</p>';
+            html += `<p>formatCurrency test: ${loc.formatCurrency(1234.56)}</p>`;
+        } catch (error) {
+            html += `<p style="color: red;">❌ Error: ${error.message}</p>`;
+        }
+        
+        output.innerHTML = html;
+    </script>
+</body>
+</html>

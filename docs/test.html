@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>Tab Test</title>
+    <style>
+        .tab-btn { padding: 10px; margin: 5px; cursor: pointer; }
+        .tab-btn.active { background: blue; color: white; }
+        .tab-content { display: none; padding: 20px; }
+        .tab-content.active { display: block; }
+    </style>
+</head>
+<body>
+    <h1>Tab Switching Test</h1>
+    
+    <div>
+        <button class="tab-btn active" data-tab="tab1">Tab 1</button>
+        <button class="tab-btn" data-tab="tab2">Tab 2</button>
+        <button class="tab-btn" data-tab="tab3">Tab 3</button>
+    </div>
+    
+    <div class="tab-content active" id="tab1-tab">
+        <h2>Tab 1 Content</h2>
+        <p>This is tab 1</p>
+    </div>
+    
+    <div class="tab-content" id="tab2-tab">
+        <h2>Tab 2 Content</h2>
+        <p>This is tab 2</p>
+    </div>
+    
+    <div class="tab-content" id="tab3-tab">
+        <h2>Tab 3 Content</h2>
+        <p>This is tab 3</p>
+    </div>
+    
+    <script>
+        console.log('Script loaded');
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded');
+            
+            const buttons = document.querySelectorAll('.tab-btn');
+            console.log('Found buttons:', buttons.length);
+            
+            buttons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    console.log('Button clicked:', btn.dataset.tab);
+                    
+                    // Remove active from all
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    // Add active to clicked
+                    btn.classList.add('active');
+                    const tabId = btn.dataset.tab + '-tab';
+                    document.getElementById(tabId).classList.add('active');
+                    
+                    console.log('Switched to:', tabId);
+                });
+            });
+            
+            console.log('Tab switching initialized');
+        });
+    </script>
+</body>
+</html>
