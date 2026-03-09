@@ -5,9 +5,9 @@
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { join } from 'path';
 
-// Create public directory if it doesn't exist
-if (!existsSync('public')) {
-  mkdirSync('public');
+// Create docs directory if it doesn't exist
+if (!existsSync('docs')) {
+  mkdirSync('docs');
 }
 
 // Read all compiled JS files and bundle them
@@ -85,7 +85,7 @@ window.createAnnualReport = createAnnualReport;
 `;
 
 // Write bundle
-writeFileSync('public/app.js', bundle);
+writeFileSync('docs/app.js', bundle);
 
-console.log('✓ Build complete! Bundle created at public/app.js');
-console.log('✓ Open public/index.html in your browser to use the app');
+console.log('✓ Build complete! Bundle created at docs/app.js');
+console.log('✓ Open docs/index.html in your browser to use the app');
