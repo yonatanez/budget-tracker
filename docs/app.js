@@ -4240,7 +4240,7 @@ class StockValueCalculatorUI {
  * for CRUD operations on AdditionalIncomeEntry records.
  */
 
-const TYPE_LABELS = {
+const AI_TYPE_LABELS = {
     'משכורת': 'משכורת',
     'אחר': 'אחר'
 };
@@ -4375,7 +4375,7 @@ class AdditionalIncomeManager {
     renderEntryHtml(entry) {
         const monthName = this.localizationService.getMonthName(entry.month.getMonth() + 1);
         const year = entry.month.getFullYear();
-        const typeLabel = TYPE_LABELS[entry.incomeType];
+        const typeLabel = AI_TYPE_LABELS[entry.incomeType];
         const amount = this.formatCurrency(entry.amount);
         const desc = this.escapeHtml(entry.description);
         return `

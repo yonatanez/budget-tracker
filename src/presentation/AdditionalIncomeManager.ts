@@ -9,7 +9,7 @@ import { ValidationService } from '../data-access/ValidationService';
 import { LocalizationService } from '../data-access/LocalizationService';
 import { createAdditionalIncomeEntry } from '../domain/models';
 
-const TYPE_LABELS: Record<IncomeType, string> = {
+const AI_TYPE_LABELS: Record<IncomeType, string> = {
   'משכורת': 'משכורת',
   'אחר': 'אחר'
 };
@@ -151,7 +151,7 @@ export class AdditionalIncomeManager {
   private renderEntryHtml(entry: AdditionalIncomeEntry): string {
     const monthName = this.localizationService.getMonthName(entry.month.getMonth() + 1);
     const year = entry.month.getFullYear();
-    const typeLabel = TYPE_LABELS[entry.incomeType];
+    const typeLabel = AI_TYPE_LABELS[entry.incomeType];
     const amount = this.formatCurrency(entry.amount);
     const desc = this.escapeHtml(entry.description);
 
