@@ -128,6 +128,48 @@
                     <!-- Salary entries will be rendered here by EntryManager -->
                 </div>
             </div>
+
+            <!-- Additional Income Section -->
+            <div id="additional-income-section" class="entry-section">
+                <h3>הכנסות נוספות</h3>
+
+                <form id="additional-income-form" novalidate>
+                    <div class="form-group">
+                        <label for="additionalIncomeMonth">חודש:</label>
+                        <div class="date-selector-group">
+                            <select id="additionalIncomeMonth" aria-label="חודש" required></select>
+                            <select id="additionalIncomeYear" aria-label="שנה" required></select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="additionalIncomeType">סוג הכנסה:</label>
+                        <select id="additionalIncomeType" required>
+                            <option value="משכורת">משכורת</option>
+                            <option value="אחר" selected>אחר</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="additionalIncomeDescription">תיאור:</label>
+                        <input type="text" id="additionalIncomeDescription" maxlength="200" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="additionalIncomeAmount">סכום (₪):</label>
+                        <input type="number" id="additionalIncomeAmount" step="0.01" min="0.01" required>
+                    </div>
+
+                    <button type="submit" class="btn-primary">הוסף הכנסה נוספת</button>
+                </form>
+
+                <div id="additional-income-result" class="result-box" style="display: none;"></div>
+
+                <h4>רשומות הכנסות נוספות</h4>
+                <div id="additional-income-list" class="entry-list">
+                    <!-- Entries rendered by AdditionalIncomeManager -->
+                </div>
+            </div>
         </div>
 
         <!-- Expense Tab -->
@@ -158,6 +200,7 @@
                         <option value="דירה">דירה</option>
                         <option value="חינוך">חינוך</option>
                         <option value="חשמל ומים">חשמל ומים</option>
+                        <option value="חתונות">חתונות</option>
                         <option value="מזון">מזון</option>
                         <option value="תחבורה">תחבורה</option>
                     </select>

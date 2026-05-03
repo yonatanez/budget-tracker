@@ -14,13 +14,15 @@ import {
   ValidationError,
   UploadResult,
   SavingsEntry,
-  SavingsEntryInput
+  SavingsEntryInput,
+  AdditionalIncomeEntry,
+  AdditionalIncomeInput
 } from '../domain/types';
 import { TaxCalculator } from './TaxCalculator';
 import { ExpenseManager } from './ExpenseManager';
 import { ValidationService } from '../data-access/ValidationService';
 import { StorageService } from '../data-access/StorageService';
-import { createSalaryRecord, createMonthlyReport, createAnnualReport, createSavingsEntry } from '../domain/models';
+import { createSalaryRecord, createMonthlyReport, createAnnualReport, createSavingsEntry, createAdditionalIncomeEntry } from '../domain/models';
 import { RecurringExpenseGenerator } from './RecurringExpenseGenerator';
 import { SavingsGoalManager } from './SavingsGoalManager';
 
@@ -88,24 +90,32 @@ export class BudgetController {
    */
   async getMonthlyReport(year: number, month: number): Promise<MonthlyReport | null> {
     const data = await this.storageService.loadAllData();
+    const additionalIncomes = await this.storageService.loadAdditionalIncomes();
 
     // Find salary for this month
-    const salary = data.salaries.find(s => 
+    const salary = data.salaries.find(s =>
       s.month.getFullYear() === year && s.month.getMonth() === month
     );
 
-    if (!salary) {
+    // Filter additional incomes to this month
+    const monthIncomes = this.filterIncomesByMonth(additionalIncomes, year, month);
+
+    // Requirement 5.4: return a report when additional incomes exist even without a salary
+    if (!salary && monthIncomes.length === 0) {
       return null;
     }
+
+    const salaryNet = salary ? salary.taxCalculation.netIncome : 0;
 
     // Get expenses for this month
     const expenses = this.expenseManager.getExpensesByMonth(data.expenses, year, month);
 
-    // Create monthly report
+    // Create monthly report (salary net + additional incomes summed inside createMonthlyReport)
     return createMonthlyReport(
       new Date(year, month, 1),
-      salary.taxCalculation.netIncome,
-      expenses
+      salaryNet,
+      expenses,
+      monthIncomes
     );
   }
 
@@ -114,6 +124,7 @@ export class BudgetController {
    */
   async getAnnualReport(): Promise<AnnualReport> {
     const data = await this.storageService.loadAllData();
+    const additionalIncomes = await this.storageService.loadAdditionalIncomes();
 
     // Get last 12 months
     const endDate = new Date();
@@ -140,11 +151,13 @@ export class BudgetController {
 
       const netIncome = salary ? salary.taxCalculation.netIncome : 0;
       const expenses = this.expenseManager.getExpensesByMonth(data.expenses, year, month);
+      const monthIncomes = this.filterIncomesByMonth(additionalIncomes, year, month);
 
       monthlyReports.push(createMonthlyReport(
         new Date(year, month, 1),
         netIncome,
-        expenses
+        expenses,
+        monthIncomes
       ));
 
       // Accumulate pension and study fund
@@ -206,6 +219,51 @@ export class BudgetController {
   }
 
   /**
+   * Add a new additional income entry
+   */
+  async addAdditionalIncome(input: AdditionalIncomeInput): Promise<Result<AdditionalIncomeEntry, ValidationError>> {
+    const validation = this.validationService.validateAdditionalIncomeInput(input);
+    if (!validation.isValid) {
+      return {
+        success: false,
+        error: {
+          field: 'additionalIncome',
+          message: validation.errors.join(', ')
+        }
+      };
+    }
+
+    const entry = createAdditionalIncomeEntry(input);
+    await this.storageService.saveAdditionalIncome(entry);
+
+    return {
+      success: true,
+      value: entry
+    };
+  }
+
+  /**
+   * Get all additional income entries
+   */
+  async getAdditionalIncomes(): Promise<AdditionalIncomeEntry[]> {
+    return this.storageService.loadAdditionalIncomes();
+  }
+
+  /**
+   * Update an existing additional income entry
+   */
+  async updateAdditionalIncome(id: string, entry: AdditionalIncomeEntry): Promise<void> {
+    await this.storageService.updateAdditionalIncome(id, entry);
+  }
+
+  /**
+   * Delete an additional income entry
+   */
+  async deleteAdditionalIncome(id: string): Promise<void> {
+    await this.storageService.deleteAdditionalIncome(id);
+  }
+
+  /**
    * Set monthly savings goal
    */
   async setMonthlySavingsGoal(amount: number): Promise<void> {
@@ -231,6 +289,19 @@ export class BudgetController {
    */
   getRecurringExpenseGenerator(): RecurringExpenseGenerator {
     return this.recurringExpenseGenerator;
+  }
+
+  /**
+   * Filter additional income entries to a specific year/month.
+   */
+  private filterIncomesByMonth(
+    incomes: AdditionalIncomeEntry[],
+    year: number,
+    month: number
+  ): AdditionalIncomeEntry[] {
+    return incomes.filter(
+      e => e.month.getFullYear() === year && e.month.getMonth() === month
+    );
   }
 
 }

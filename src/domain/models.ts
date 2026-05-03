@@ -12,7 +12,9 @@ import {
   ExpenseInput,
   SavingsEntry,
   SavingsEntryInput,
-  RecurringExpenseConfig
+  RecurringExpenseConfig,
+  AdditionalIncomeEntry,
+  AdditionalIncomeInput
 } from './types';
 
 /**
@@ -98,30 +100,45 @@ export function createExpense(input: ExpenseInput): Expense {
 
 /**
  * Create a new MonthlyReport
+ *
+ * `salaryNetIncome` is the net income derived from the salary record (may be 0
+ * if there is no salary for the month). `additionalIncomes` are supplementary
+ * income entries for the same month. The returned report's `netIncome` is the
+ * total income for the month: `salaryNetIncome + additionalIncomeTotal`.
  */
 export function createMonthlyReport(
   month: Date,
-  netIncome: number,
-  expenses: Expense[]
+  salaryNetIncome: number,
+  expenses: Expense[],
+  additionalIncomes: AdditionalIncomeEntry[] = []
 ): MonthlyReport {
   const totalExpenses = roundToTwoDecimals(
     expenses.reduce((sum, expense) => sum + expense.amount, 0)
   );
-  
+
+  const additionalIncomeTotal = roundToTwoDecimals(
+    additionalIncomes.reduce((sum, entry) => sum + entry.amount, 0)
+  );
+
+  const netIncome = roundToTwoDecimals(salaryNetIncome + additionalIncomeTotal);
+
   const expensesByCategory = new Map<string, number>();
   expenses.forEach(expense => {
     const category = expense.category ?? 'Uncategorized';
     const current = expensesByCategory.get(category) ?? 0;
     expensesByCategory.set(category, roundToTwoDecimals(current + expense.amount));
   });
-  
+
   return {
     month,
-    netIncome: roundToTwoDecimals(netIncome),
+    netIncome,
     expenses,
     totalExpenses,
     expensesByCategory,
-    netSavings: roundToTwoDecimals(netIncome - totalExpenses)
+    netSavings: roundToTwoDecimals(netIncome - totalExpenses),
+    additionalIncomes,
+    salaryNetIncome: roundToTwoDecimals(salaryNetIncome),
+    additionalIncomeTotal
   };
 }
 
@@ -141,6 +158,9 @@ export function createAnnualReport(
   const totalExpenses = roundToTwoDecimals(
     monthlyReports.reduce((sum, report) => sum + report.totalExpenses, 0)
   );
+  const totalAdditionalIncome = roundToTwoDecimals(
+    monthlyReports.reduce((sum, report) => sum + report.additionalIncomeTotal, 0)
+  );
   
   const expensesByCategory = new Map<string, number>();
   monthlyReports.forEach(report => {
@@ -159,7 +179,8 @@ export function createAnnualReport(
     totalSavings: roundToTwoDecimals(totalIncome - totalExpenses),
     expensesByCategory,
     totalPensionAccumulation: roundToTwoDecimals(totalPensionAccumulation),
-    totalStudyFundAccumulation: roundToTwoDecimals(totalStudyFundAccumulation)
+    totalStudyFundAccumulation: roundToTwoDecimals(totalStudyFundAccumulation),
+    totalAdditionalIncome
   };
 }
 
@@ -170,6 +191,24 @@ export function createSavingsEntry(input: SavingsEntryInput): SavingsEntry {
   return {
     id: generateId(),
     type: input.type,
+    description: input.description,
+    amount: roundToTwoDecimals(input.amount),
+    month: input.month,
+    createdAt: new Date()
+  };
+}
+
+/**
+ * Create a new AdditionalIncomeEntry with generated ID, rounded amount,
+ * and current timestamp. Preserves incomeType, description, and month
+ * from the input.
+ */
+export function createAdditionalIncomeEntry(
+  input: AdditionalIncomeInput
+): AdditionalIncomeEntry {
+  return {
+    id: generateId(),
+    incomeType: input.incomeType,
     description: input.description,
     amount: roundToTwoDecimals(input.amount),
     month: input.month,

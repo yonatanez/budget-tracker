@@ -74,15 +74,49 @@ export interface SalaryRecord {
 }
 
 /**
+ * Income type label for an additional income entry.
+ * "משכורת" = Salary (a second/supplementary salary, e.g., side job)
+ * "אחר"    = Other (freelance, rental, gifts, etc.)
+ */
+export type IncomeType = 'משכורת' | 'אחר';
+
+/**
+ * Input for creating an additional income entry.
+ */
+export interface AdditionalIncomeInput {
+  incomeType: IncomeType;
+  description: string;
+  amount: number;
+  month: Date;
+}
+
+/**
+ * Stored additional income entry.
+ */
+export interface AdditionalIncomeEntry {
+  id: string;
+  incomeType: IncomeType;
+  description: string;
+  amount: number;
+  month: Date;
+  createdAt: Date;
+}
+
+/**
  * Monthly financial report
  */
 export interface MonthlyReport {
   month: Date;
+  // `netIncome` now means "total income: salary net + additional"
+  // (widened from just salary net income to include additional income sources).
   netIncome: number;
   expenses: Expense[];
   totalExpenses: number;
   expensesByCategory: Map<string, number>;
   netSavings: number;
+  additionalIncomes: AdditionalIncomeEntry[];
+  salaryNetIncome: number;
+  additionalIncomeTotal: number;
 }
 
 /**
@@ -98,6 +132,7 @@ export interface AnnualReport {
   expensesByCategory: Map<string, number>;
   totalPensionAccumulation: number;
   totalStudyFundAccumulation: number;
+  totalAdditionalIncome: number;
 }
 
 /**

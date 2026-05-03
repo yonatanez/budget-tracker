@@ -106,11 +106,11 @@ describe('TaxCalculator', () => {
       // Income tax calculation (on taxable = 50000 - 3000 - 1250 = 45750):
       // Bracket 1: 7010 * 0.10 = 701
       // Bracket 2: (10060 - 7010) * 0.14 = 3050 * 0.14 = 427
-      // Bracket 3: (16150 - 10060) * 0.20 = 6090 * 0.20 = 1218
-      // Bracket 4: (22440 - 16150) * 0.31 = 6290 * 0.31 = 1949.9
-      // Bracket 5: (45750 - 22440) * 0.35 = 23310 * 0.35 = 8158.5
-      // Total: 701 + 427 + 1218 + 1949.9 + 8158.5 = 12454.4
-      expect(result.incomeTax).toBe(12454.4);
+      // Bracket 3: (19000 - 10060) * 0.20 = 8940 * 0.20 = 1788
+      // Bracket 4: (25100 - 19000) * 0.31 = 6100 * 0.31 = 1891
+      // Bracket 5: (45750 - 25100) * 0.35 = 20650 * 0.35 = 7227.5
+      // Total: 701 + 427 + 1788 + 1891 + 7227.5 = 12034.5
+      expect(result.incomeTax).toBe(12034.5);
 
       // National Insurance (progressive, capped at 51910):
       // Bracket 1: 7703 * 1.04% = 80.11
@@ -130,8 +130,8 @@ describe('TaxCalculator', () => {
       // Study fund employer: 50000 * 0.075 = 3750
       expect(result.studyFundEmployerContribution).toBe(3750);
 
-      // Net income: 50000 - 12454.4 - 3040.9 - 2435.56 - 3000 - 1250 = 27819.14
-      expect(result.netIncome).toBe(27819.14);
+      // Net income: 50000 - 12034.5 - 3040.9 - 2435.56 - 3000 - 1250 = 28239.04
+      expect(result.netIncome).toBe(28239.04);
     });
 
     it('should apply National Insurance ceiling correctly', () => {

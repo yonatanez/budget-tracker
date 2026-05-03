@@ -35,7 +35,8 @@ const files = [
   'dist/data-access/CompanyList.js',
   'dist/data-access/StockAPIClient.js',
   'dist/application/StockCalculatorService.js',
-  'dist/presentation/StockValueCalculatorUI.js'
+  'dist/presentation/StockValueCalculatorUI.js',
+  'dist/presentation/AdditionalIncomeManager.js'
 ];
 
 let bundle = '// Israeli Budget Tracker - Bundled Application\n\n';
@@ -77,11 +78,13 @@ window.SavingsGoalManager = SavingsGoalManager;
 window.StockAPIClient = StockAPIClient;
 window.StockCalculatorService = StockCalculatorService;
 window.StockValueCalculatorUI = StockValueCalculatorUI;
+window.AdditionalIncomeManager = AdditionalIncomeManager;
 window.createExpense = createExpense;
 window.createSavingsEntry = createSavingsEntry;
 window.createSalaryRecord = createSalaryRecord;
 window.createMonthlyReport = createMonthlyReport;
 window.createAnnualReport = createAnnualReport;
+window.createAdditionalIncomeEntry = createAdditionalIncomeEntry;
 `;
 
 // Write bundle

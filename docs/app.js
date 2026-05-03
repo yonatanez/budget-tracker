@@ -84,9 +84,16 @@ function createExpense(input) {
 }
 /**
  * Create a new MonthlyReport
+ *
+ * `salaryNetIncome` is the net income derived from the salary record (may be 0
+ * if there is no salary for the month). `additionalIncomes` are supplementary
+ * income entries for the same month. The returned report's `netIncome` is the
+ * total income for the month: `salaryNetIncome + additionalIncomeTotal`.
  */
-function createMonthlyReport(month, netIncome, expenses) {
+function createMonthlyReport(month, salaryNetIncome, expenses, additionalIncomes = []) {
     const totalExpenses = roundToTwoDecimals(expenses.reduce((sum, expense) => sum + expense.amount, 0));
+    const additionalIncomeTotal = roundToTwoDecimals(additionalIncomes.reduce((sum, entry) => sum + entry.amount, 0));
+    const netIncome = roundToTwoDecimals(salaryNetIncome + additionalIncomeTotal);
     const expensesByCategory = new Map();
     expenses.forEach(expense => {
         const category = expense.category ?? 'Uncategorized';
@@ -95,11 +102,14 @@ function createMonthlyReport(month, netIncome, expenses) {
     });
     return {
         month,
-        netIncome: roundToTwoDecimals(netIncome),
+        netIncome,
         expenses,
         totalExpenses,
         expensesByCategory,
-        netSavings: roundToTwoDecimals(netIncome - totalExpenses)
+        netSavings: roundToTwoDecimals(netIncome - totalExpenses),
+        additionalIncomes,
+        salaryNetIncome: roundToTwoDecimals(salaryNetIncome),
+        additionalIncomeTotal
     };
 }
 /**
@@ -108,6 +118,7 @@ function createMonthlyReport(month, netIncome, expenses) {
 function createAnnualReport(startDate, endDate, monthlyReports, totalPensionAccumulation, totalStudyFundAccumulation) {
     const totalIncome = roundToTwoDecimals(monthlyReports.reduce((sum, report) => sum + report.netIncome, 0));
     const totalExpenses = roundToTwoDecimals(monthlyReports.reduce((sum, report) => sum + report.totalExpenses, 0));
+    const totalAdditionalIncome = roundToTwoDecimals(monthlyReports.reduce((sum, report) => sum + report.additionalIncomeTotal, 0));
     const expensesByCategory = new Map();
     monthlyReports.forEach(report => {
         report.expensesByCategory.forEach((amount, category) => {
@@ -124,7 +135,8 @@ function createAnnualReport(startDate, endDate, monthlyReports, totalPensionAccu
         totalSavings: roundToTwoDecimals(totalIncome - totalExpenses),
         expensesByCategory,
         totalPensionAccumulation: roundToTwoDecimals(totalPensionAccumulation),
-        totalStudyFundAccumulation: roundToTwoDecimals(totalStudyFundAccumulation)
+        totalStudyFundAccumulation: roundToTwoDecimals(totalStudyFundAccumulation),
+        totalAdditionalIncome
     };
 }
 /**
@@ -134,6 +146,21 @@ function createSavingsEntry(input) {
     return {
         id: generateId(),
         type: input.type,
+        description: input.description,
+        amount: roundToTwoDecimals(input.amount),
+        month: input.month,
+        createdAt: new Date()
+    };
+}
+/**
+ * Create a new AdditionalIncomeEntry with generated ID, rounded amount,
+ * and current timestamp. Preserves incomeType, description, and month
+ * from the input.
+ */
+function createAdditionalIncomeEntry(input) {
+    return {
+        id: generateId(),
+        incomeType: input.incomeType,
         description: input.description,
         amount: roundToTwoDecimals(input.amount),
         month: input.month,
@@ -447,6 +474,38 @@ class DefaultValidationService {
             errors
         };
     }
+    /**
+     * Validates an additional income input
+     * @param input - Additional income input to validate
+     * @returns Validation result with Hebrew error messages
+     */
+    validateAdditionalIncomeInput(input) {
+        const errors = [];
+        // Validate incomeType (must be one of: משכורת, אחר)
+        if (input.incomeType !== 'משכורת' && input.incomeType !== 'אחר') {
+            errors.push('סוג הכנסה לא חוקי');
+        }
+        // Validate description: trim then require length in [1, 200]
+        const description = (input.description ?? '').trim();
+        if (description.length === 0) {
+            errors.push('תיאור חובה');
+        }
+        else if (description.length > 200) {
+            errors.push('התיאור חייב להיות עד 200 תווים');
+        }
+        // Validate amount (must be finite and strictly greater than 0)
+        if (!Number.isFinite(input.amount) || input.amount <= 0) {
+            errors.push('הסכום חייב להיות מספר חיובי');
+        }
+        // Validate month (must be a valid Date)
+        if (!(input.month instanceof Date) || isNaN(input.month.getTime())) {
+            errors.push('חודש לא חוקי');
+        }
+        return {
+            isValid: errors.length === 0,
+            errors
+        };
+    }
 }
 //# sourceMappingURL=ValidationService.js.map
 
@@ -708,7 +767,8 @@ const STORAGE_KEYS = {
     SALARIES: 'israeli-budget-tracker:salaries',
     EXPENSES: 'israeli-budget-tracker:expenses',
     SAVINGS: 'israeli-budget-tracker:savings',
-    MONTHLY_SAVINGS_GOAL: 'israeli-budget-tracker:monthly-savings-goal'
+    MONTHLY_SAVINGS_GOAL: 'israeli-budget-tracker:monthly-savings-goal',
+    ADDITIONAL_INCOMES: 'israeli-budget-tracker:additional-incomes'
 };
 /**
  * Hebrew error messages for storage operations
@@ -965,6 +1025,71 @@ class LocalStorageService {
             console.error(ERROR_MESSAGES.CORRUPTED_DATA, error);
             return null;
         }
+    }
+    /**
+     * Saves an additional income entry to localStorage
+     * @param entry - AdditionalIncomeEntry to persist
+     * @throws Error with Hebrew message if save fails
+     */
+    async saveAdditionalIncome(entry) {
+        try {
+            const entries = await this.loadAdditionalIncomes();
+            entries.push(entry);
+            this.saveToStorage(STORAGE_KEYS.ADDITIONAL_INCOMES, entries);
+        }
+        catch (error) {
+            throw new Error(ERROR_MESSAGES.SAVE_FAILED);
+        }
+    }
+    /**
+     * Loads all additional income entries from localStorage
+     * @returns Array of AdditionalIncomeEntry records, empty array if corrupted or missing
+     */
+    async loadAdditionalIncomes() {
+        try {
+            const entries = this.loadFromStorage(STORAGE_KEYS.ADDITIONAL_INCOMES) || [];
+            return entries.map(e => ({
+                ...e,
+                month: new Date(e.month),
+                createdAt: new Date(e.createdAt)
+            }));
+        }
+        catch (error) {
+            console.error(ERROR_MESSAGES.CORRUPTED_DATA, error);
+            return [];
+        }
+    }
+    /**
+     * Updates an existing additional income entry by ID
+     * @param id - ID of the additional income entry to update
+     * @param entry - Updated additional income entry data
+     * @throws Error with Hebrew message if record not found
+     */
+    async updateAdditionalIncome(id, entry) {
+        const entries = await this.loadAdditionalIncomes();
+        const index = entries.findIndex(e => e.id === id);
+        if (index === -1) {
+            throw new Error(ERROR_MESSAGES.RECORD_NOT_FOUND);
+        }
+        entries[index] = {
+            ...entry,
+            id: entries[index].id,
+            createdAt: entries[index].createdAt
+        };
+        this.saveToStorage(STORAGE_KEYS.ADDITIONAL_INCOMES, entries);
+    }
+    /**
+     * Deletes an additional income entry by ID
+     * @param id - ID of the additional income entry to delete
+     * @throws Error with Hebrew message if record not found
+     */
+    async deleteAdditionalIncome(id) {
+        const entries = await this.loadAdditionalIncomes();
+        const filtered = entries.filter(e => e.id !== id);
+        if (filtered.length === entries.length) {
+            throw new Error(ERROR_MESSAGES.RECORD_NOT_FOUND);
+        }
+        this.saveToStorage(STORAGE_KEYS.ADDITIONAL_INCOMES, filtered);
     }
     /**
      * Helper method to save data to localStorage
@@ -1476,13 +1601,13 @@ class ChartDataPrepService {
  * - Study fund contributions (2.5% employee, 7.5% employer)
  */
 class TaxCalculator {
-    // 2026 Israeli Tax Brackets (monthly)
+    // 2026 Israeli Tax Brackets (monthly) — updated per Income Tax Amendment 288
     static TAX_BRACKETS = [
         { ceiling: 7010, rate: 0.10 }, // Up to ₪7,010: 10%
         { ceiling: 10060, rate: 0.14 }, // ₪7,011-₪10,060: 14%
-        { ceiling: 16150, rate: 0.20 }, // ₪10,061-₪16,150: 20%
-        { ceiling: 22440, rate: 0.31 }, // ₪16,151-₪22,440: 31%
-        { ceiling: 46690, rate: 0.35 }, // ₪22,441-₪46,690: 35%
+        { ceiling: 19000, rate: 0.20 }, // ₪10,061-₪19,000: 20% (expanded from ₪16,150)
+        { ceiling: 25100, rate: 0.31 }, // ₪19,001-₪25,100: 31% (expanded from ₪22,440)
+        { ceiling: 46690, rate: 0.35 }, // ₪25,101-₪46,690: 35%
         { ceiling: Infinity, rate: 0.47 }, // Above ₪46,690: 47%
     ];
     // National Insurance progressive brackets (2026)
@@ -1501,8 +1626,8 @@ class TaxCalculator {
     // Study fund contribution rates
     static STUDY_FUND_EMPLOYEE_RATE = 0.025;
     static STUDY_FUND_EMPLOYER_RATE = 0.075;
-    // Tax credit points configuration (2024 rate)
-    static MONTHLY_CREDIT_VALUE_PER_POINT = 223;
+    // Tax credit points configuration (2026 rate)
+    static MONTHLY_CREDIT_VALUE_PER_POINT = 242;
     static DEFAULT_TAX_CREDIT_POINTS = 2.25;
     /**
      * Calculate net income from salary components
@@ -1853,21 +1978,27 @@ class BudgetController {
      */
     async getMonthlyReport(year, month) {
         const data = await this.storageService.loadAllData();
+        const additionalIncomes = await this.storageService.loadAdditionalIncomes();
         // Find salary for this month
         const salary = data.salaries.find(s => s.month.getFullYear() === year && s.month.getMonth() === month);
-        if (!salary) {
+        // Filter additional incomes to this month
+        const monthIncomes = this.filterIncomesByMonth(additionalIncomes, year, month);
+        // Requirement 5.4: return a report when additional incomes exist even without a salary
+        if (!salary && monthIncomes.length === 0) {
             return null;
         }
+        const salaryNet = salary ? salary.taxCalculation.netIncome : 0;
         // Get expenses for this month
         const expenses = this.expenseManager.getExpensesByMonth(data.expenses, year, month);
-        // Create monthly report
-        return createMonthlyReport(new Date(year, month, 1), salary.taxCalculation.netIncome, expenses);
+        // Create monthly report (salary net + additional incomes summed inside createMonthlyReport)
+        return createMonthlyReport(new Date(year, month, 1), salaryNet, expenses, monthIncomes);
     }
     /**
      * Get annual report for the last 12 months
      */
     async getAnnualReport() {
         const data = await this.storageService.loadAllData();
+        const additionalIncomes = await this.storageService.loadAdditionalIncomes();
         // Get last 12 months
         const endDate = new Date();
         const startDate = new Date();
@@ -1886,7 +2017,8 @@ class BudgetController {
             const salary = data.salaries.find(s => s.month.getFullYear() === year && s.month.getMonth() === month);
             const netIncome = salary ? salary.taxCalculation.netIncome : 0;
             const expenses = this.expenseManager.getExpensesByMonth(data.expenses, year, month);
-            monthlyReports.push(createMonthlyReport(new Date(year, month, 1), netIncome, expenses));
+            const monthIncomes = this.filterIncomesByMonth(additionalIncomes, year, month);
+            monthlyReports.push(createMonthlyReport(new Date(year, month, 1), netIncome, expenses, monthIncomes));
             // Accumulate pension and study fund
             if (salary) {
                 totalPensionAccumulation +=
@@ -1932,6 +2064,45 @@ class BudgetController {
         await this.storageService.deleteSavingsEntry(id);
     }
     /**
+     * Add a new additional income entry
+     */
+    async addAdditionalIncome(input) {
+        const validation = this.validationService.validateAdditionalIncomeInput(input);
+        if (!validation.isValid) {
+            return {
+                success: false,
+                error: {
+                    field: 'additionalIncome',
+                    message: validation.errors.join(', ')
+                }
+            };
+        }
+        const entry = createAdditionalIncomeEntry(input);
+        await this.storageService.saveAdditionalIncome(entry);
+        return {
+            success: true,
+            value: entry
+        };
+    }
+    /**
+     * Get all additional income entries
+     */
+    async getAdditionalIncomes() {
+        return this.storageService.loadAdditionalIncomes();
+    }
+    /**
+     * Update an existing additional income entry
+     */
+    async updateAdditionalIncome(id, entry) {
+        await this.storageService.updateAdditionalIncome(id, entry);
+    }
+    /**
+     * Delete an additional income entry
+     */
+    async deleteAdditionalIncome(id) {
+        await this.storageService.deleteAdditionalIncome(id);
+    }
+    /**
      * Set monthly savings goal
      */
     async setMonthlySavingsGoal(amount) {
@@ -1954,6 +2125,12 @@ class BudgetController {
      */
     getRecurringExpenseGenerator() {
         return this.recurringExpenseGenerator;
+    }
+    /**
+     * Filter additional income entries to a specific year/month.
+     */
+    filterIncomesByMonth(incomes, year, month) {
+        return incomes.filter(e => e.month.getFullYear() === year && e.month.getMonth() === month);
     }
 }
 //# sourceMappingURL=BudgetController.js.map
@@ -4057,6 +4234,330 @@ class StockValueCalculatorUI {
 { StockValueCalculatorUI, STOCK_CALC_MESSAGES };
 //# sourceMappingURL=StockValueCalculatorUI.js.map
 
+// dist/presentation/AdditionalIncomeManager.js
+/**
+ * AdditionalIncomeManager - Manages the additional income UI in the salary tab
+ * for CRUD operations on AdditionalIncomeEntry records.
+ */
+
+const TYPE_LABELS = {
+    'משכורת': 'משכורת',
+    'אחר': 'אחר'
+};
+const AI_MESSAGES = {
+    EMPTY: 'לא נמצאו הכנסות נוספות',
+    EDIT: 'ערוך',
+    DELETE: 'מחק',
+    SAVE: 'שמור',
+    CANCEL: 'ביטול',
+    DELETE_CONFIRM: 'האם אתה בטוח שברצונך למחוק רשומה זו?',
+    SUCCESS_ADD: '✓ ההכנסה הנוספת נוספה בהצלחה!',
+    SUCCESS_UPDATE: '✓ הרשומה עודכנה בהצלחה!'
+};
+class AdditionalIncomeManager {
+    storageService;
+    validationService;
+    localizationService;
+    constructor(storageService, validationService, localizationService) {
+        this.storageService = storageService;
+        this.validationService = validationService;
+        this.localizationService = localizationService;
+    }
+    /** Initialize: populate month/year selectors, attach handlers, render list */
+    async init() {
+        this.populateMonthSelector('additionalIncomeMonth');
+        this.populateYearSelector('additionalIncomeYear');
+        const form = document.getElementById('additional-income-form');
+        if (form) {
+            form.addEventListener('submit', (e) => {
+                e.preventDefault();
+                void this.handleFormSubmit();
+            });
+        }
+        await this.renderEntries();
+    }
+    populateMonthSelector(id, selectedMonth) {
+        const select = document.getElementById(id);
+        if (!select)
+            return;
+        select.innerHTML = '';
+        const currentMonth = new Date().getMonth() + 1;
+        const target = selectedMonth ?? currentMonth;
+        for (let m = 1; m <= 12; m++) {
+            const opt = document.createElement('option');
+            opt.value = String(m);
+            opt.textContent = this.localizationService.getMonthName(m);
+            if (m === target)
+                opt.selected = true;
+            select.appendChild(opt);
+        }
+    }
+    populateYearSelector(id, selectedYear) {
+        const select = document.getElementById(id);
+        if (!select)
+            return;
+        select.innerHTML = '';
+        const currentYear = new Date().getFullYear();
+        const target = selectedYear ?? currentYear;
+        // Show last 2 years + next 2 years
+        for (let y = currentYear - 2; y <= currentYear + 2; y++) {
+            const opt = document.createElement('option');
+            opt.value = String(y);
+            opt.textContent = String(y);
+            if (y === target)
+                opt.selected = true;
+            select.appendChild(opt);
+        }
+    }
+    async handleFormSubmit() {
+        const monthSel = document.getElementById('additionalIncomeMonth');
+        const yearSel = document.getElementById('additionalIncomeYear');
+        const typeSel = document.getElementById('additionalIncomeType');
+        const descInput = document.getElementById('additionalIncomeDescription');
+        const amountInput = document.getElementById('additionalIncomeAmount');
+        const resultBox = document.getElementById('additional-income-result');
+        if (!monthSel || !yearSel || !typeSel || !descInput || !amountInput || !resultBox)
+            return;
+        const month = parseInt(monthSel.value, 10);
+        const year = parseInt(yearSel.value, 10);
+        const input = {
+            incomeType: typeSel.value,
+            description: descInput.value,
+            amount: parseFloat(amountInput.value),
+            month: new Date(year, month - 1, 1)
+        };
+        const validation = this.validationService.validateAdditionalIncomeInput(input);
+        if (!validation.isValid) {
+            this.showError(resultBox, validation.errors.join(', '));
+            return;
+        }
+        try {
+            const entry = createAdditionalIncomeEntry(input);
+            await this.storageService.saveAdditionalIncome(entry);
+            this.showSuccess(resultBox, AI_MESSAGES.SUCCESS_ADD);
+            descInput.value = '';
+            amountInput.value = '';
+            await this.renderEntries();
+        }
+        catch (err) {
+            this.showError(resultBox, err instanceof Error ? err.message : String(err));
+        }
+    }
+    /** Render the entry list sorted by month desc (ties by createdAt desc) */
+    async renderEntries() {
+        const container = document.getElementById('additional-income-list');
+        if (!container)
+            return;
+        const entries = await this.storageService.loadAdditionalIncomes();
+        if (entries.length === 0) {
+            container.innerHTML = `<div class="empty-state">${AI_MESSAGES.EMPTY}</div>`;
+            return;
+        }
+        const sorted = [...entries].sort((a, b) => {
+            const monthDiff = b.month.getTime() - a.month.getTime();
+            if (monthDiff !== 0)
+                return monthDiff;
+            return b.createdAt.getTime() - a.createdAt.getTime();
+        });
+        container.innerHTML = sorted.map((e) => this.renderEntryHtml(e)).join('');
+        // Attach handlers
+        container.querySelectorAll('.entry-item').forEach((el) => {
+            const id = el.dataset.id;
+            if (!id)
+                return;
+            const entry = entries.find((x) => x.id === id);
+            if (!entry)
+                return;
+            el.querySelector('.edit-btn')?.addEventListener('click', () => this.showEditForm(entry));
+            el.querySelector('.delete-btn')?.addEventListener('click', () => this.showDeleteConfirmation(id));
+        });
+    }
+    renderEntryHtml(entry) {
+        const monthName = this.localizationService.getMonthName(entry.month.getMonth() + 1);
+        const year = entry.month.getFullYear();
+        const typeLabel = TYPE_LABELS[entry.incomeType];
+        const amount = this.formatCurrency(entry.amount);
+        const desc = this.escapeHtml(entry.description);
+        return `
+      <div class="entry-item" data-id="${entry.id}">
+        <div class="entry-details">
+          <div><strong>${monthName} ${year}</strong> · ${typeLabel}</div>
+          <div>${desc}</div>
+          <div class="entry-amount">${amount}</div>
+        </div>
+        <div class="entry-actions">
+          <button type="button" class="edit-btn">${AI_MESSAGES.EDIT}</button>
+          <button type="button" class="delete-btn">${AI_MESSAGES.DELETE}</button>
+        </div>
+      </div>
+    `;
+    }
+    showEditForm(entry) {
+        const existing = document.getElementById('additional-income-edit-overlay');
+        if (existing)
+            existing.remove();
+        const overlay = document.createElement('div');
+        overlay.id = 'additional-income-edit-overlay';
+        overlay.className = 'edit-form-overlay';
+        overlay.innerHTML = `
+      <div class="edit-form-modal">
+        <h3>עריכת הכנסה נוספת</h3>
+        <form id="edit-additional-income-form" novalidate>
+          <div class="form-group">
+            <label>חודש:</label>
+            <div class="date-selector-group">
+              <select id="edit-additional-income-month" required></select>
+              <select id="edit-additional-income-year" required></select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>סוג הכנסה:</label>
+            <select id="edit-additional-income-type" required>
+              <option value="משכורת">משכורת</option>
+              <option value="אחר">אחר</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>תיאור:</label>
+            <input type="text" id="edit-additional-income-description" maxlength="200" required>
+          </div>
+          <div class="form-group">
+            <label>סכום (₪):</label>
+            <input type="number" id="edit-additional-income-amount" step="0.01" min="0.01" required>
+          </div>
+          <div id="edit-additional-income-error" class="error-box" style="display:none;"></div>
+          <div class="form-actions">
+            <button type="submit" class="btn-primary">${AI_MESSAGES.SAVE}</button>
+            <button type="button" class="btn-secondary" id="edit-cancel-btn">${AI_MESSAGES.CANCEL}</button>
+          </div>
+        </form>
+      </div>
+    `;
+        document.body.appendChild(overlay);
+        // Populate selectors with the entry's values pre-selected
+        this.populateMonthSelector('edit-additional-income-month', entry.month.getMonth() + 1);
+        this.populateYearSelector('edit-additional-income-year', entry.month.getFullYear());
+        const typeSel = document.getElementById('edit-additional-income-type');
+        typeSel.value = entry.incomeType;
+        document.getElementById('edit-additional-income-description').value = entry.description;
+        document.getElementById('edit-additional-income-amount').value = String(entry.amount);
+        const closeModal = () => overlay.remove();
+        document.getElementById('edit-cancel-btn')?.addEventListener('click', closeModal);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay)
+                closeModal();
+        });
+        const form = document.getElementById('edit-additional-income-form');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const month = parseInt(document.getElementById('edit-additional-income-month').value, 10);
+            const year = parseInt(document.getElementById('edit-additional-income-year').value, 10);
+            const incomeType = document.getElementById('edit-additional-income-type').value;
+            const description = document.getElementById('edit-additional-income-description').value;
+            const amount = parseFloat(document.getElementById('edit-additional-income-amount').value);
+            const input = {
+                incomeType,
+                description,
+                amount,
+                month: new Date(year, month - 1, 1)
+            };
+            const validation = this.validationService.validateAdditionalIncomeInput(input);
+            const errorBox = document.getElementById('edit-additional-income-error');
+            if (!validation.isValid) {
+                if (errorBox) {
+                    errorBox.textContent = validation.errors.join(', ');
+                    errorBox.style.display = 'block';
+                }
+                return;
+            }
+            try {
+                const updated = {
+                    id: entry.id,
+                    incomeType: input.incomeType,
+                    description: input.description,
+                    amount: Math.round(input.amount * 100) / 100,
+                    month: input.month,
+                    createdAt: entry.createdAt
+                };
+                await this.storageService.updateAdditionalIncome(entry.id, updated);
+                closeModal();
+                await this.renderEntries();
+            }
+            catch (err) {
+                if (errorBox) {
+                    errorBox.textContent = err instanceof Error ? err.message : String(err);
+                    errorBox.style.display = 'block';
+                }
+            }
+        });
+    }
+    showDeleteConfirmation(id) {
+        const existing = document.getElementById('additional-income-delete-overlay');
+        if (existing)
+            existing.remove();
+        const overlay = document.createElement('div');
+        overlay.id = 'additional-income-delete-overlay';
+        overlay.className = 'confirmation-dialog-overlay';
+        overlay.innerHTML = `
+      <div class="confirmation-dialog">
+        <p>${AI_MESSAGES.DELETE_CONFIRM}</p>
+        <div class="dialog-actions">
+          <button type="button" class="btn-danger" id="confirm-delete-btn">${AI_MESSAGES.DELETE}</button>
+          <button type="button" class="btn-secondary" id="cancel-delete-btn">${AI_MESSAGES.CANCEL}</button>
+        </div>
+      </div>
+    `;
+        document.body.appendChild(overlay);
+        const close = () => overlay.remove();
+        document.getElementById('cancel-delete-btn')?.addEventListener('click', close);
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay)
+                close();
+        });
+        document.getElementById('confirm-delete-btn')?.addEventListener('click', async () => {
+            try {
+                await this.storageService.deleteAdditionalIncome(id);
+                close();
+                await this.renderEntries();
+            }
+            catch (err) {
+                console.error('Failed to delete additional income:', err);
+                close();
+            }
+        });
+    }
+    formatCurrency(amount) {
+        return new Intl.NumberFormat('he-IL', {
+            style: 'currency',
+            currency: 'ILS',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(amount);
+    }
+    showSuccess(box, msg) {
+        box.textContent = msg;
+        box.className = 'result-box success-box';
+        box.style.display = 'block';
+        setTimeout(() => {
+            box.style.display = 'none';
+        }, 3000);
+    }
+    showError(box, msg) {
+        box.textContent = msg;
+        box.className = 'result-box error-box';
+        box.style.display = 'block';
+    }
+    escapeHtml(s) {
+        return s
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+}
+//# sourceMappingURL=AdditionalIncomeManager.js.map
+
 
 // Expose classes to window object
 window.LocalizationService = HebrewLocalizationService;
@@ -4078,8 +4579,10 @@ window.SavingsGoalManager = SavingsGoalManager;
 window.StockAPIClient = StockAPIClient;
 window.StockCalculatorService = StockCalculatorService;
 window.StockValueCalculatorUI = StockValueCalculatorUI;
+window.AdditionalIncomeManager = AdditionalIncomeManager;
 window.createExpense = createExpense;
 window.createSavingsEntry = createSavingsEntry;
 window.createSalaryRecord = createSalaryRecord;
 window.createMonthlyReport = createMonthlyReport;
 window.createAnnualReport = createAnnualReport;
+window.createAdditionalIncomeEntry = createAdditionalIncomeEntry;

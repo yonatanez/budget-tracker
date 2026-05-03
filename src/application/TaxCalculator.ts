@@ -11,13 +11,13 @@ import { SalaryComponents, TaxCalculationResult } from '../domain/types';
  * - Study fund contributions (2.5% employee, 7.5% employer)
  */
 export class TaxCalculator {
-  // 2026 Israeli Tax Brackets (monthly)
+  // 2026 Israeli Tax Brackets (monthly) — updated per Income Tax Amendment 288
   private static readonly TAX_BRACKETS = [
     { ceiling: 7010, rate: 0.10 },      // Up to ₪7,010: 10%
     { ceiling: 10060, rate: 0.14 },     // ₪7,011-₪10,060: 14%
-    { ceiling: 16150, rate: 0.20 },     // ₪10,061-₪16,150: 20%
-    { ceiling: 22440, rate: 0.31 },     // ₪16,151-₪22,440: 31%
-    { ceiling: 46690, rate: 0.35 },     // ₪22,441-₪46,690: 35%
+    { ceiling: 19000, rate: 0.20 },     // ₪10,061-₪19,000: 20% (expanded from ₪16,150)
+    { ceiling: 25100, rate: 0.31 },     // ₪19,001-₪25,100: 31% (expanded from ₪22,440)
+    { ceiling: 46690, rate: 0.35 },     // ₪25,101-₪46,690: 35%
     { ceiling: Infinity, rate: 0.47 },  // Above ₪46,690: 47%
   ];
 
@@ -41,8 +41,8 @@ export class TaxCalculator {
   private static readonly STUDY_FUND_EMPLOYEE_RATE = 0.025;
   private static readonly STUDY_FUND_EMPLOYER_RATE = 0.075;
 
-  // Tax credit points configuration (2024 rate)
-  private static readonly MONTHLY_CREDIT_VALUE_PER_POINT = 223;
+  // Tax credit points configuration (2026 rate)
+  private static readonly MONTHLY_CREDIT_VALUE_PER_POINT = 242;
   private static readonly DEFAULT_TAX_CREDIT_POINTS = 2.25;
 
   /**

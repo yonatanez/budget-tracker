@@ -3,7 +3,7 @@
  * Implements Requirements 1.8, 1.9, 3.2, 3.3, 3.5, 9.1, 9.2, 9.3
  */
 
-import { SalaryComponents, ExpenseInput, ValidationResult, Expense, RecurringExpenseConfig, SavingsEntryInput, SavingsType } from '../domain/types';
+import { SalaryComponents, ExpenseInput, ValidationResult, Expense, RecurringExpenseConfig, SavingsEntryInput, SavingsType, AdditionalIncomeInput } from '../domain/types';
 
 export interface ValidationService {
   validateSalaryComponents(components: SalaryComponents): ValidationResult;
@@ -13,6 +13,7 @@ export interface ValidationService {
   validateRecurringExpenseConfig(config: RecurringExpenseConfig): ValidationResult;
   validateSavingsEntry(input: SavingsEntryInput): ValidationResult;
   validateSavingsGoal(amount: number): ValidationResult;
+  validateAdditionalIncomeInput(input: AdditionalIncomeInput): ValidationResult;
 }
 
 
@@ -239,6 +240,43 @@ export class DefaultValidationService implements ValidationService {
     // Validate amount (must be positive)
     if (amount <= 0) {
       errors.push('יעד החיסכון חייב להיות מספר חיובי גדול מאפס');
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors
+    };
+  }
+
+  /**
+   * Validates an additional income input
+   * @param input - Additional income input to validate
+   * @returns Validation result with Hebrew error messages
+   */
+  validateAdditionalIncomeInput(input: AdditionalIncomeInput): ValidationResult {
+    const errors: string[] = [];
+
+    // Validate incomeType (must be one of: משכורת, אחר)
+    if (input.incomeType !== 'משכורת' && input.incomeType !== 'אחר') {
+      errors.push('סוג הכנסה לא חוקי');
+    }
+
+    // Validate description: trim then require length in [1, 200]
+    const description = (input.description ?? '').trim();
+    if (description.length === 0) {
+      errors.push('תיאור חובה');
+    } else if (description.length > 200) {
+      errors.push('התיאור חייב להיות עד 200 תווים');
+    }
+
+    // Validate amount (must be finite and strictly greater than 0)
+    if (!Number.isFinite(input.amount) || input.amount <= 0) {
+      errors.push('הסכום חייב להיות מספר חיובי');
+    }
+
+    // Validate month (must be a valid Date)
+    if (!(input.month instanceof Date) || isNaN(input.month.getTime())) {
+      errors.push('חודש לא חוקי');
     }
 
     return {

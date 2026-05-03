@@ -56,6 +56,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         );
         savingsTabManager.init();
 
+        // Initialize AdditionalIncomeManager
+        const additionalIncomeManager = new window.AdditionalIncomeManager(
+            storageService,
+            validationService,
+            localizationService
+        );
+        await additionalIncomeManager.init();
+
         // Load saved monthly savings goal and display in input
         try {
             const savedGoal = await savingsGoalManager.getMonthlySavingsGoal();
@@ -148,6 +156,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 // Render entry lists when navigating to salary or expense tabs
                 if (btn.dataset.tab === 'salary' && salaryEntryListContainer) {
                     await entryManager.renderSalaryList(salaryEntryListContainer);
+                    await additionalIncomeManager.renderEntries();
                 } else if (btn.dataset.tab === 'expense' && expenseEntryListContainer) {
                     // Render filtered by currently selected month
                     const selMonth = parseInt(document.getElementById('expenseMonth').value, 10) || (new Date().getMonth() + 1);
@@ -616,6 +625,19 @@ document.getElementById('monthly-form').addEventListener('submit', async (e) => 
         html += `<div class="summary-card"><div class="summary-label">סה"כ הוצאות</div><div class="summary-value">${localizationService.formatCurrency(report.totalExpenses)}</div></div>`;
         html += `<div class="summary-card"><div class="summary-label">חיסכון נטו</div><div class="summary-value">${localizationService.formatCurrency(report.netSavings)}</div></div>`;
         html += '</div>';
+
+        // Income breakdown: show salary net and each additional income entry
+        if (report.additionalIncomes && report.additionalIncomes.length > 0) {
+            html += '<h3>פירוט הכנסות</h3>';
+            html += '<div class="income-breakdown">';
+            html += `<div class="income-item"><strong>משכורת נטו:</strong> ${localizationService.formatCurrency(report.salaryNetIncome)}</div>`;
+            report.additionalIncomes.forEach(entry => {
+                const desc = entry.description || 'ללא תיאור';
+                html += `<div class="income-item">${desc} (${entry.incomeType}): ${localizationService.formatCurrency(entry.amount)}</div>`;
+            });
+            html += `<div class="income-item"><strong>סה"כ הכנסות נוספות:</strong> ${localizationService.formatCurrency(report.additionalIncomeTotal)}</div>`;
+            html += '</div>';
+        }
         
         if (report.expensesByCategory.size > 0) {
             html += '<h3>הוצאות לפי קטגוריה</h3>';

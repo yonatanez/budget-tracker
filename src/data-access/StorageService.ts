@@ -4,7 +4,7 @@
  * Implements Requirements 8.1, 8.2, 8.3, 8.4, 8.5
  */
 
-import { SalaryRecord, Expense, FinancialData, SavingsEntry } from '../domain/types';
+import { SalaryRecord, Expense, FinancialData, SavingsEntry, AdditionalIncomeEntry } from '../domain/types';
 
 export interface StorageService {
   saveSalary(salary: SalaryRecord): Promise<void>;
@@ -20,6 +20,10 @@ export interface StorageService {
   deleteSavingsEntry(id: string): Promise<void>;
   saveMonthlySavingsGoal(amount: number): Promise<void>;
   loadMonthlySavingsGoal(): Promise<number | null>;
+  saveAdditionalIncome(entry: AdditionalIncomeEntry): Promise<void>;
+  loadAdditionalIncomes(): Promise<AdditionalIncomeEntry[]>;
+  updateAdditionalIncome(id: string, entry: AdditionalIncomeEntry): Promise<void>;
+  deleteAdditionalIncome(id: string): Promise<void>;
 }
 
 /**
@@ -29,7 +33,8 @@ const STORAGE_KEYS = {
   SALARIES: 'israeli-budget-tracker:salaries',
   EXPENSES: 'israeli-budget-tracker:expenses',
   SAVINGS: 'israeli-budget-tracker:savings',
-  MONTHLY_SAVINGS_GOAL: 'israeli-budget-tracker:monthly-savings-goal'
+  MONTHLY_SAVINGS_GOAL: 'israeli-budget-tracker:monthly-savings-goal',
+  ADDITIONAL_INCOMES: 'israeli-budget-tracker:additional-incomes'
 } as const;
 
 /**
@@ -320,6 +325,78 @@ export class LocalStorageService implements StorageService {
       console.error(ERROR_MESSAGES.CORRUPTED_DATA, error);
       return null;
     }
+  }
+
+  /**
+   * Saves an additional income entry to localStorage
+   * @param entry - AdditionalIncomeEntry to persist
+   * @throws Error with Hebrew message if save fails
+   */
+  async saveAdditionalIncome(entry: AdditionalIncomeEntry): Promise<void> {
+    try {
+      const entries = await this.loadAdditionalIncomes();
+      entries.push(entry);
+      this.saveToStorage(STORAGE_KEYS.ADDITIONAL_INCOMES, entries);
+    } catch (error) {
+      throw new Error(ERROR_MESSAGES.SAVE_FAILED);
+    }
+  }
+
+  /**
+   * Loads all additional income entries from localStorage
+   * @returns Array of AdditionalIncomeEntry records, empty array if corrupted or missing
+   */
+  async loadAdditionalIncomes(): Promise<AdditionalIncomeEntry[]> {
+    try {
+      const entries = this.loadFromStorage<AdditionalIncomeEntry[]>(STORAGE_KEYS.ADDITIONAL_INCOMES) || [];
+      return entries.map(e => ({
+        ...e,
+        month: new Date(e.month),
+        createdAt: new Date(e.createdAt)
+      }));
+    } catch (error) {
+      console.error(ERROR_MESSAGES.CORRUPTED_DATA, error);
+      return [];
+    }
+  }
+
+  /**
+   * Updates an existing additional income entry by ID
+   * @param id - ID of the additional income entry to update
+   * @param entry - Updated additional income entry data
+   * @throws Error with Hebrew message if record not found
+   */
+  async updateAdditionalIncome(id: string, entry: AdditionalIncomeEntry): Promise<void> {
+    const entries = await this.loadAdditionalIncomes();
+    const index = entries.findIndex(e => e.id === id);
+
+    if (index === -1) {
+      throw new Error(ERROR_MESSAGES.RECORD_NOT_FOUND);
+    }
+
+    entries[index] = {
+      ...entry,
+      id: entries[index].id,
+      createdAt: entries[index].createdAt
+    };
+
+    this.saveToStorage(STORAGE_KEYS.ADDITIONAL_INCOMES, entries);
+  }
+
+  /**
+   * Deletes an additional income entry by ID
+   * @param id - ID of the additional income entry to delete
+   * @throws Error with Hebrew message if record not found
+   */
+  async deleteAdditionalIncome(id: string): Promise<void> {
+    const entries = await this.loadAdditionalIncomes();
+    const filtered = entries.filter(e => e.id !== id);
+
+    if (filtered.length === entries.length) {
+      throw new Error(ERROR_MESSAGES.RECORD_NOT_FOUND);
+    }
+
+    this.saveToStorage(STORAGE_KEYS.ADDITIONAL_INCOMES, filtered);
   }
 
   /**
