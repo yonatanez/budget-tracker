@@ -62,7 +62,9 @@ document.addEventListener('DOMContentLoaded', async function() {
             validationService,
             localizationService
         );
-        await additionalIncomeManager.init();
+        additionalIncomeManager.init().catch(err => {
+            console.error('Error initializing AdditionalIncomeManager:', err);
+        });
 
         // Load saved monthly savings goal and display in input
         try {
